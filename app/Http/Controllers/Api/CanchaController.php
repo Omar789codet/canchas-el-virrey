@@ -23,7 +23,7 @@ class CanchaController extends Controller
         $request->validate(['fecha' => ['required', 'date']]);
 
         $ocupados = Reserva::where('cancha_id', $cancha->id)
-            ->where('fecha', $request->fecha)
+            ->whereDate('fecha', $request->fecha)
             ->where('estado', '!=', 'cancelada')
             ->get(['hora_inicio', 'hora_fin']);
 

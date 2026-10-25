@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cancha;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 
 class CanchaController extends Controller
@@ -56,7 +57,23 @@ class CanchaController extends Controller
 
     public function destroy(Cancha $cancha)
     {
-        $cancha->delete();
+        // Si la cancha tiene reservas asociadas, la base de datos rechaza el
+        // borrado (restrictOnDelete) para no perder el historial. En vez de
+        // mostrar un error de SQL, lo explicamos y sugerimos desactivarla.
+        if ($cancha->reservas()->exists()) {
+            return back()->with(
+                'error',
+                'No se puede eliminar esta cancha porque tiene reservas registradas. '
+                . 'Si ya no está en uso, cámbiale el estado a "Inactiva" en vez de eliminarla.'
+            );
+        }
+
+        try {
+            $cancha->delete();
+        } catch (QueryException $e) {
+            return back()->with('error', 'No se pudo eliminar la cancha: tiene registros asociados.');
+        }
+
         return back()->with('ok', 'Cancha eliminada.');
     }
 }

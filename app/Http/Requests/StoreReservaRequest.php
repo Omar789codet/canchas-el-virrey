@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Rules\HorarioDisponible;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreReservaRequest extends FormRequest
 {
@@ -25,7 +26,10 @@ class StoreReservaRequest extends FormRequest
         $reservaId = $this->route('reserva')?->id;
 
         return [
-            'cancha_id' => ['required', 'exists:canchas,id'],
+            'cancha_id' => [
+                'required',
+                Rule::exists('canchas', 'id')->where('estado', 'disponible'),
+            ],
             'user_id' => ['required', 'exists:users,id'],
             'fecha' => ['required', 'date', 'after_or_equal:today'],
             'hora_fin' => ['required', 'date_format:H:i', 'after:hora_inicio'],
@@ -47,6 +51,7 @@ class StoreReservaRequest extends FormRequest
         return [
             'hora_fin.after' => 'La hora de fin debe ser posterior a la hora de inicio.',
             'fecha.after_or_equal' => 'No se pueden crear reservas en fechas pasadas.',
+            'cancha_id.exists' => 'Esta cancha no está disponible para reservar (en mantenimiento o inactiva).',
         ];
     }
 }

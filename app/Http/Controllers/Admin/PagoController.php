@@ -23,6 +23,10 @@ class PagoController extends Controller
      */
     public function marcarPagado(Pago $pago)
     {
+        if ($pago->reserva->estado === 'cancelada') {
+            return back()->with('error', 'No se puede marcar como pagada una reserva cancelada.');
+        }
+
         $pago->update([
             'estado' => 'pagado',
             'verificado_por' => Auth::id(),

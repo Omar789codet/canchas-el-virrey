@@ -43,11 +43,18 @@ class Reserva extends Model
     /**
      * Regla de negocio central: ¿esta cancha ya tiene una reserva
      * (no cancelada) que se cruza con el horario solicitado?
+     *
+     * Usamos whereDate() en vez de where('fecha', ...) porque comparar
+     * la fecha como texto exacto es frágil: el formato de almacenamiento
+     * puede variar ligeramente según el motor de base de datos (esto se
+     * detectó con las pruebas automatizadas, que corren sobre SQLite).
+     * whereDate() normaliza la comparación a nivel de fecha sin importar
+     * el motor usado.
      */
     public static function existeCruce(int $canchaId, string $fecha, string $horaInicio, string $horaFin, ?int $ignorarReservaId = null): bool
     {
         return static::where('cancha_id', $canchaId)
-            ->where('fecha', $fecha)
+            ->whereDate('fecha', $fecha)
             ->where('estado', '!=', 'cancelada')
             ->when($ignorarReservaId, fn ($q) => $q->where('id', '!=', $ignorarReservaId))
             ->where('hora_inicio', '<', $horaFin)
