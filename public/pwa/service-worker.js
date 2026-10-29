@@ -1,8 +1,18 @@
-const CACHE = 'canchas-el-virrey-v1';
+const CACHE = 'canchas-el-virrey-v2';
 const ASSETS = ['/pwa/index.html', '/pwa/css/app.css', '/pwa/js/app.js', '/pwa/manifest.json'];
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // activa la nueva versión sin esperar a cerrar pestañas
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+});
+
+self.addEventListener('activate', (event) => {
+  // Borra cualquier caché de una versión anterior (v1, etc.)
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
+    ).then(() => self.clients.claim())
+  );
 });
 
 self.addEventListener('fetch', (event) => {

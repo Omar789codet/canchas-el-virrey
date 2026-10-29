@@ -1,0 +1,38 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: canchas-el-virrey-app
+    ports:
+      - "8000:8000"
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_DATABASE: canchas_el_virrey
+      DB_USERNAME: canchas_user
+      DB_PASSWORD: canchas_pass
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    container_name: canchas-el-virrey-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: canchas_el_virrey
+      MYSQL_USER: canchas_user
+      MYSQL_PASSWORD: canchas_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    volumes:
+      - canchas_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  canchas_db_data:

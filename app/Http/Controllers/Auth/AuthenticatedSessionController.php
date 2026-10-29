@@ -28,6 +28,15 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        // Antes, cualquier usuario (admin, recepción o cliente) terminaba
+        // en /dashboard, la pantalla genérica de Breeze. Ahora, el personal
+        // (admin/recepción) entra directo a su panel de gestión.
+        $user = Auth::user();
+
+        if ($user->esStaff()) {
+            return redirect()->intended(route('admin.canchas.index', absolute: false));
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

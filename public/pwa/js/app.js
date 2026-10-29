@@ -1,6 +1,8 @@
 const API = '/api';
 let token = localStorage.getItem('token');
+let usuarioActual = null;
 const app = document.getElementById('app');
+const headerTitle = document.querySelector('header h2');
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/pwa/service-worker.js');
@@ -23,7 +25,6 @@ async function api(path, options = {}) {
 
 function render(html) { app.innerHTML = html; }
 
-// ---------- Horarios en formato 12h (AM/PM) para los <select> ----------
 function opcionesHora() {
   let html = '';
   for (let h = 0; h < 24; h++) {
@@ -38,8 +39,60 @@ function opcionesHora() {
   return html;
 }
 
+async function cerrarSesion() {
+  await api('/auth/logout', { method: 'POST' }).catch(() => {});
+  localStorage.removeItem('token');
+  token = null;
+  usuarioActual = null;
+  headerTitle.textContent = 'Canchas El Virrey';
+  vistaLogin();
+}
+
+// ---------- Panel de perfil (arriba a la derecha) ----------
+function renderTopbarPerfil() {
+  if (!usuarioActual) return '';
+  const inicial = (usuarioActual.name || '?').trim().charAt(0).toUpperCase();
+  return `
+    <div class="topbar-user" id="topbarUser">
+      <span class="avatar-circle">${inicial}</span>
+      <span class="topbar-name">${usuarioActual.name}<small>${usuarioActual.email}</small></span>
+      <span class="topbar-chevron">▾</span>
+      <div class="topbar-menu" id="topbarMenu">
+        <button id="btnVerPerfil">Editar mi perfil</button>
+        <button id="btnCerrarSesion" class="danger">Cerrar sesión</button>
+      </div>
+    </div>
+  `;
+}
+
+function activarTopbarPerfil(vistaAlVolver) {
+  const toggle = document.getElementById('topbarUser');
+  const menu = document.getElementById('topbarMenu');
+  if (!toggle) return;
+
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    menu.classList.toggle('open');
+  });
+  document.addEventListener('click', () => menu.classList.remove('open'), { once: true });
+
+  document.getElementById('btnVerPerfil').onclick = () => vistaPerfil(vistaAlVolver);
+  document.getElementById('btnCerrarSesion').onclick = cerrarSesion;
+}
+
+function actualizarHeader() {
+  headerTitle.textContent = usuarioActual ? `Hola, ${usuarioActual.name.split(' ')[0]}` : 'Canchas El Virrey';
+  const slot = document.getElementById('headerPerfilSlot');
+  if (slot) slot.innerHTML = renderTopbarPerfil();
+  activarTopbarPerfil('canchas');
+}
+
 // ---------- Login / Registro ----------
 function vistaLogin() {
+  headerTitle.textContent = 'Canchas El Virrey';
+  const slot = document.getElementById('headerPerfilSlot');
+  if (slot) slot.innerHTML = '';
+
   render(`
     <div class="card">
       <h3>Iniciar sesión</h3>
@@ -68,6 +121,7 @@ function vistaLogin() {
         }),
       });
       token = data.token;
+      usuarioActual = data.user;
       localStorage.setItem('token', token);
       vistaCanchas();
     } catch (e) {
@@ -87,6 +141,7 @@ function vistaLogin() {
         }),
       });
       token = data.token;
+      usuarioActual = data.user;
       localStorage.setItem('token', token);
       vistaCanchas();
     } catch (e) {
@@ -102,7 +157,6 @@ async function vistaCanchas() {
     <div class="tabs">
       <button class="active">Reservar</button>
       <button id="irMisReservas">Mis reservas</button>
-      <button id="cerrarSesion">Salir</button>
     </div>
     <div class="card">
       <h3>Reservar cancha</h3>
@@ -118,14 +172,9 @@ async function vistaCanchas() {
       <p id="msg"></p>
     </div>
   `);
+  actualizarHeader();
 
   document.getElementById('irMisReservas').onclick = vistaMisReservas;
-  document.getElementById('cerrarSesion').onclick = async () => {
-    await api('/auth/logout', { method: 'POST' }).catch(() => {});
-    localStorage.removeItem('token');
-    token = null;
-    vistaLogin();
-  };
 
   document.getElementById('btnReservar').onclick = async () => {
     try {
@@ -153,7 +202,6 @@ async function vistaMisReservas() {
     <div class="tabs">
       <button id="irCanchas">Reservar</button>
       <button class="active">Mis reservas</button>
-      <button id="cerrarSesion">Salir</button>
     </div>
     ${reservas.map((r) => `
       <div class="card">
@@ -163,18 +211,59 @@ async function vistaMisReservas() {
       </div>
     `).join('') || '<p>Todavía no tienes reservas.</p>'}
   `);
+  actualizarHeader();
   document.getElementById('irCanchas').onclick = vistaCanchas;
-  document.getElementById('cerrarSesion').onclick = async () => {
-    await api('/auth/logout', { method: 'POST' }).catch(() => {});
-    localStorage.removeItem('token');
-    token = null;
-    vistaLogin();
+}
+
+// ---------- Editar perfil ----------
+function vistaPerfil(vistaAlVolver) {
+  render(`
+    <div class="card">
+      <h3>Mi perfil</h3>
+      <input id="pname" placeholder="Nombre completo" value="${usuarioActual.name}">
+      <input id="pemail" type="email" placeholder="Correo" value="${usuarioActual.email}">
+      <input id="ptelefono" placeholder="Teléfono" value="${usuarioActual.telefono || ''}">
+      <input id="ppassword" type="password" placeholder="Nueva contraseña (opcional)">
+      <button id="btnGuardarPerfil">Guardar cambios</button>
+      <button id="btnVolverPerfil" style="background:var(--surface-2);color:var(--text);margin-top:.5rem;">Volver</button>
+      <p id="msg"></p>
+    </div>
+  `);
+
+  document.getElementById('btnVolverPerfil').onclick = () =>
+    vistaAlVolver === 'misReservas' ? vistaMisReservas() : vistaCanchas();
+
+  document.getElementById('btnGuardarPerfil').onclick = async () => {
+    try {
+      const data = await api('/profile', {
+        method: 'PUT',
+        body: JSON.stringify({
+          name: document.getElementById('pname').value,
+          email: document.getElementById('pemail').value,
+          telefono: document.getElementById('ptelefono').value,
+          password: document.getElementById('ppassword').value || null,
+        }),
+      });
+      usuarioActual = data.user;
+      vistaCanchas();
+    } catch (e) {
+      document.getElementById('msg').textContent = e.errors
+        ? Object.values(e.errors).flat().join(' ')
+        : 'No se pudo actualizar el perfil.';
+    }
   };
 }
 
 // ---------- Arranque ----------
-if (token) {
-  vistaCanchas().catch(() => { localStorage.removeItem('token'); vistaLogin(); });
-} else {
-  vistaLogin();
+async function iniciar() {
+  if (!token) return vistaLogin();
+  try {
+    usuarioActual = await api('/auth/me');
+    vistaCanchas();
+  } catch (e) {
+    localStorage.removeItem('token');
+    token = null;
+    vistaLogin();
+  }
 }
+iniciar();

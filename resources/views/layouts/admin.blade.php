@@ -25,17 +25,56 @@
         a { color: #22c55e; }
         .badge.bg-success { background-color: #22c55e !important; color: #0a0a0a; }
         .badge.bg-warning { background-color: #f59e0b !important; color: #0a0a0a; }
+
+        /* Panel de perfil (esquina superior derecha) */
+        .avatar-circle {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: #22c55e; color: #0a0a0a; font-weight: 700;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: .85rem;
+        }
+        .perfil-toggle {
+            background: transparent; border: 1px solid #333; border-radius: 999px;
+            padding: .3rem .8rem .3rem .3rem; color: #ececec; display: flex; align-items: center; gap: .5rem;
+        }
+        .perfil-toggle:hover { border-color: #22c55e; }
+        .dropdown-menu { background: #1e1e1e; border-color: #333; }
+        .dropdown-item { color: #ececec; }
+        .dropdown-item:hover { background: #262626; color: #22c55e; }
+        .perfil-rol { font-size: .72rem; color: #a0a0a0; text-transform: capitalize; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-dark mb-4">
-        <div class="container">
-            <span class="navbar-brand">⚽ Canchas El Virrey — Administración</span>
-            <div class="d-flex gap-3">
+        <div class="container d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center gap-4">
+                <span class="navbar-brand mb-0">⚽ Canchas El Virrey</span>
                 <a href="{{ route('admin.canchas.index') }}" class="text-decoration-none">Canchas</a>
                 <a href="{{ route('admin.reservas.index') }}" class="text-decoration-none">Reservas</a>
                 <a href="{{ route('admin.pagos.index') }}" class="text-decoration-none">Pagos</a>
             </div>
+
+            @auth
+            <div class="dropdown">
+                <button class="perfil-toggle dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <span class="avatar-circle">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</span>
+                    <span class="text-start">
+                        <span class="d-block" style="line-height:1;">{{ auth()->user()->name }}</span>
+                        <span class="perfil-rol">{{ auth()->user()->role }}</span>
+                    </span>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Editar mi perfil</a></li>
+                    <li><hr class="dropdown-divider" style="border-color:#333;"></li>
+                    <li>
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="dropdown-item">Cerrar sesión</button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+            @endauth
         </div>
     </nav>
     <div class="container pb-5">
@@ -57,5 +96,7 @@
 
         @yield('content')
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

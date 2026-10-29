@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CanchaController;
+use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReservaController;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +16,9 @@ Route::get('/canchas/{cancha}/disponibilidad', [CanchaController::class, 'dispon
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [ProfileController::class, 'me']);
+    Route::put('/profile', [ProfileController::class, 'update']);
+
     Route::get('/mis-reservas', [ReservaController::class, 'misReservas']);
     Route::post('/reservas', [ReservaController::class, 'store']);
 });
